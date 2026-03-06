@@ -50,7 +50,7 @@ public final class BoostyParser: Parser, @unchecked Sendable {
                 return nil
             })
 
-        guard !images.isEmpty else { throw ParserError.badImagePages }
+        guard !images.isEmpty else { throw ParserError.badImagePages(url: url) }
 
         return (post.title.replacingOccurrences(of: " ", with: "_"), images)
     }
@@ -99,7 +99,7 @@ private extension BoostyParser {
             Self.logger.info("=====Парсинг статей по тегам завершён.=====")
         }
 
-        guard !posts.isEmpty else { throw ParserError.badImagePages }
+        guard !posts.isEmpty else { throw ParserError.badImagePages(url: url) }
         let nameFolder: String
 
         let postFirst = posts[0]
@@ -110,6 +110,8 @@ private extension BoostyParser {
         }
         
         let titleFolderURL: URL = try getFolderDirectiory(fileName: nameFolder)
+
+        let semaphore = AsyncSemaphore(value: 1)
 
         try await withThrowingTaskGroup(of: Void.self) { group in
 
@@ -125,8 +127,9 @@ private extension BoostyParser {
                     })
 
                 guard !images.isEmpty else { continue }
-
+                await semaphore.wait()
                 group.addTask { [weak self] in
+                    defer { semaphore.signal() }
                     try await self?.downloadPages(
                         urls: images,
                         fileName: post.title.replacingOccurrences(of: " ", with: "_"),

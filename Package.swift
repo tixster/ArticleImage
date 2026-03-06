@@ -31,6 +31,7 @@ let package = Package(
             from: "1.2.0"
         ),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        .package(url: "https://github.com/groue/Semaphore.git", from: "0.1.0"),
     ],
     targets: [
         .target(
@@ -38,6 +39,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Zip", package: "Zip"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "Semaphore", package: "Semaphore"),
                 .target(name: "Common")
             ],
             swiftSettings: [
@@ -61,8 +63,9 @@ let package = Package(
             dependencies: [
                 .product(name: "Zip", package: "Zip"),
                 .product(name: "Regex", package: "Regex"),
+                .product(name: "Semaphore", package: "Semaphore"),
                 .target(name: "Parser"),
-                .target(name: "Common")
+                .target(name: "Common"),
             ],
             swiftSettings: [
                 .unsafeFlags(
@@ -75,8 +78,9 @@ let package = Package(
             name: "BoostyParser",
             dependencies: [
                 .product(name: "Zip", package: "Zip"),
+                .product(name: "Semaphore", package: "Semaphore"),
                 .target(name: "Parser"),
-                .target(name: "Common")
+                .target(name: "Common"),
             ],
             swiftSettings: [
                 .unsafeFlags(
@@ -94,9 +98,6 @@ let package = Package(
                 ),
                 .target(name: "VKParser"),
                 .target(name: "BoostyParser")
-            ],
-            resources: [
-                .process("Resources")
             ]
         ),
         .testTarget(

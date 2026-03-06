@@ -3,7 +3,7 @@ import Foundation
 public enum ParserError: LocalizedError {
     case invalidURL
     case badImagePage
-    case badImagePages
+    case badImagePages(url: URL)
     case badMatchingData
     case docNotLocation
     case notAuthData
@@ -20,8 +20,8 @@ extension ParserError {
             "Неудалось провалидировать URL."
         case .badImagePage:
             "Изображение не обнаружено."
-        case .badImagePages:
-            "Изображений не обнаружено."
+        case .badImagePages(let url):
+            "Изображений не обнаружено. Статья: \(url.absoluteString)"
         case .badMatchingData:
             "Неудалось получить ссылки на изображения."
         case .notAuthData:

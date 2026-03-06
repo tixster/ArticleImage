@@ -5,6 +5,7 @@ import Foundation
 @preconcurrency import Zip
 @_exported import Logging
 @_exported import Common
+@_exported import Semaphore
 
 open class Parser: IParser, @unchecked Sendable {
 
@@ -16,7 +17,7 @@ open class Parser: IParser, @unchecked Sendable {
 
     nonisolated public static var logger: Logger { .init(label: String(describing: Self.self)) }
 
-    private static let userAgent: String = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    private static let userAgent: String = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15"
     public let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.httpAdditionalHeaders = [
@@ -29,7 +30,7 @@ open class Parser: IParser, @unchecked Sendable {
         let session: URLSession = URLSession(configuration: config)
         return session
     }()
-    nonisolated(unsafe) public let fileManager: FileManager = .default
+    public let fileManager: FileManager = .default
     public let downloadDir: URL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
     open var parseDir: URL { downloadDir.appending(path: "articles").appending(path: name) }
     public let decoder: JSONDecoder = .init()
@@ -129,13 +130,15 @@ extension Parser {
         withZip: Bool = false
     ) async throws -> URL {
 
+        let semaphore = AsyncSemaphore(value: 1)
         let folders: [URL] = try await withThrowingTaskGroup(of: URL.self) { group in
 
             var files: [URL] = []
 
             for case let url? in urls {
-
+                await semaphore.wait()
                 group.addTask {
+                    defer { semaphore.signal() }
                     let newInfo: ArticleInfo = info.update(url: url)
                     return try await self.parse(info: newInfo)
                 }
@@ -166,7 +169,6 @@ extension Parser {
             return parseDir
         }
 
-
     }
 
 
@@ -176,7 +178,7 @@ extension Parser {
 public extension Parser {
 
     @discardableResult
-    nonisolated(unsafe) func downloadPages(
+    func downloadPages(
         urls: [URL],
         fileName: String,
         rootPath: String? = nil
@@ -191,11 +193,15 @@ public extension Parser {
         try await withThrowingTaskGroup(of: (url: URL, name: String).self) { group in
 
             for (index, url) in urls.enumerated() {
-                group.addTask { [weak self] in
-                    guard let self else { throw ParserError.internalError }
+                group.addTask {
                     Self.logger.info("Скачиваю изображение \(index + 1)/\(urls.count):\n\(url)")
-                    let urlFilePath = try await self.session.download(from: url).0
+                    let (urlFilePath, resp) = try await self.session.download(from: url)
                     let name: String = "\(index).\(url.imageExt)"
+                    if let resp = resp as? HTTPURLResponse {
+                        if resp.statusCode != 200 {
+                            throw NSError(domain: "statusCode != 200", code: resp.statusCode, userInfo: nil)
+                        }
+                    }
                     return (urlFilePath, name)
                 }
             }
@@ -232,12 +238,11 @@ public extension Parser {
 extension Parser {
 
     func downloadPagesAndArchive(urls: [URL]) async throws -> [ArchiveFile] {
-        try await withThrowingTaskGroup(of: ArchiveFile.self) { goup in
+        try await withThrowingTaskGroup(of: ArchiveFile.self) { group in
             var files: [ArchiveFile] = []
 
             for (index, url) in urls.enumerated() {
-                goup.addTask { [weak self] in
-                    guard let self else { throw ParserError.internalError }
+                group.addTask {
                     let urlFilePath = try await self.session.download(from: url).0
                     let file: ArchiveFile = .init(
                         filename: "\(index).\(url.imageExt)",
@@ -248,7 +253,7 @@ extension Parser {
                 }
             }
 
-            for try await file in goup {
+            for try await file in group {
                 files.append(file)
             }
 

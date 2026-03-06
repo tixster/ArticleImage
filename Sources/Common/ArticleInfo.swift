@@ -9,13 +9,15 @@ public struct ArticleInfo: Sendable {
     public init(
         url: URL?,
         remixnsid: String?,
-        remixsid: String?
+        remixsid: String?,
+        remixdmgr: String?
     ) {
         self.url = url
-        if let remixsid, let remixnsid {
+        if let remixsid, let remixnsid, let remixdmgr {
             let remixnsid =  "remixnsid=" + remixnsid + ";"
             let remixsid = "remixsid=" + remixsid + ";"
-            self.cookie = remixnsid + " " + remixsid
+            let remixdmgr = "remixdmgr=" + remixdmgr + ";"
+            self.cookie = remixnsid + " " + remixsid + " " + remixdmgr
         } else {
             cookie = nil
         }

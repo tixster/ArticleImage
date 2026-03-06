@@ -88,7 +88,7 @@ public final class VKParser: Parser, @unchecked Sendable {
     ) async throws -> (fileName: String, images: [URL]) {
         let (html, url) = try await fetchHTML(info: info)
 
-        let imageURLs: [URL] = try await fetchImages(html: html)
+        let imageURLs: [URL] = try await fetchImages(html: html, url: url)
 
         let fileName = url.lastPathComponent.replacingOccurrences(of: "@", with: "")
 
@@ -123,11 +123,11 @@ private extension VKParser {
         }
     }
 
-    func fetchImages(html: String) async throws -> [URL] {
+    func fetchImages(html: String, url: URL) async throws -> [URL] {
         var pagesURL: [URL] = []
         pagesURL.append(contentsOf: try await parseAsDoc(html: html))
         pagesURL.append(contentsOf: try parseAsImg(html: html))
-        guard !pagesURL.isEmpty else { throw ParserError.badImagePages }
+        guard !pagesURL.isEmpty else { throw ParserError.badImagePages(url: url) }
         return pagesURL
     }
 

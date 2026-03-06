@@ -12,6 +12,8 @@ extension VKParserApp.VK {
         var remixnsid: String?
         @Option(name: [.customLong("sid")])
         var remixsid: String?
+        @Option(name: [.customLong("dmgr")])
+        var remixdmgr: String?
 
         @Argument(help: "Ссылки на статьи", transform: { URL(string: $0) })
         var urls: [URL?]
@@ -22,7 +24,8 @@ extension VKParserApp.VK {
                 info: .init(
                     url: nil,
                     remixnsid: remixnsid,
-                    remixsid: remixsid
+                    remixsid: remixsid,
+                    remixdmgr: remixdmgr
                 ),
                 withZip: false
             )
